@@ -210,3 +210,14 @@ begin
   values ('catalog', p_file_name, n, auth.jwt() ->> 'email');
   return n;
 end $$;
+
+-- Shared "recertified" flag per coach, toggled by clicking a row. Keyed by credential number so it survives list uploads.
+create table if not exists public.coach_flags (
+  credential_number text primary key,
+  recertified boolean not null default false,
+  marked_by text,
+  marked_at timestamptz not null default now()
+);
+alter table public.coach_flags enable row level security;
+drop policy if exists staff_all on public.coach_flags;
+create policy staff_all on public.coach_flags for all to authenticated using (public.is_allowed()) with check (public.is_allowed());

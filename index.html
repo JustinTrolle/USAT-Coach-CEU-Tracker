@@ -60,6 +60,7 @@ input[type=text]{min-width:220px}
 .tile{background:#fff;border:1px solid var(--gray-border);border-radius:4px;padding:12px 14px}
 .tile .n{font-family:var(--font-heading);font-size:1.6rem;color:var(--usat-blue)}
 .tile .n.red{color:var(--usat-red)}
+.tile .n.green{color:#2E7D32}
 .tile .l{font-size:.75rem;color:var(--gray-mid);text-transform:uppercase;letter-spacing:.4px}
 
 /* table */
@@ -71,6 +72,10 @@ tr.level-head td{background:var(--blue-tint2);font-family:var(--font-heading);co
 tr.coach:nth-child(even) td{background:#fafbfd}
 tr.coach:hover td{background:var(--blue-tint)}
 tr.coach.sel td{background:#fdf3f5}
+tr.coach{cursor:pointer}
+tr.coach.recert td{background:#E3F4E6}
+tr.coach.recert:hover td{background:#D2ECD7}
+.flag.green{background:#2E7D32}
 td.name{font-weight:700;white-space:nowrap}
 td.name .cred{display:block;font-weight:400;font-size:.72rem;color:var(--gray-mid)}
 td.email{font-size:.85rem;word-break:break-all}
@@ -183,6 +188,8 @@ tr.detail td{background:var(--blue-tint);padding:14px 16px 16px 46px}
               <option value="ssbad">SafeSport expired</option>
               <option value="anybad">Either expired</option>
               <option value="noceu">No official CEUs in range</option>
+              <option value="recert">Recertified</option>
+              <option value="notrecert">Not yet recertified</option>
               <option value="selected">Selected only</option>
             </select>
           </div>
@@ -291,7 +298,7 @@ const fmtDate = s => { const d=parseISO(s); return d? d.toLocaleDateString("en-U
 const daysUntil = s => { const d=parseISO(s); if(!d) return null; const t=new Date(); t.setHours(0,0,0,0); return Math.round((d-t)/86400000); };
 
 const state = {
-  user:null, coaches:[], orders:[], catalog:[], notes:[], aliases:[], uploads:[],
+  user:null, coaches:[], orders:[], catalog:[], notes:[], aliases:[], uploads:[], flags:[],
   selected:new Set(), open:new Set(), levels:new Set([1,2,3]), search:"", quick:"all",
   from: localStorage.getItem("ceu.from") || DEFAULT_FROM, to: localStorage.getItem("ceu.to") || todayISO(),
   computed:null, catSearch:"", catType:""
@@ -331,15 +338,16 @@ async function loadAll(){
   // Make sure the session is fresh before firing the parallel reads.
   const {data:{session}} = await sb.auth.getSession();
   if(session && session.expires_at && session.expires_at*1000 - Date.now() < 60000) await sb.auth.refreshSession();
-  const [coaches, orders, catalog, notes, aliases, uploads] = await Promise.all([
+  const [coaches, orders, catalog, notes, aliases, uploads, flags] = await Promise.all([
     fetchAll("coaches","*","credential_number"),
     fetchAll("orders","*","order_id"),
     fetchAll("catalog_products","*","id"),
     fetchAll("coach_notes","*","id"),
     fetchAll("coach_aliases","*","credential_number"),
     fetchAll("uploads","*","id"),
+    fetchAll("coach_flags","*","credential_number"),
   ]);
-  Object.assign(state,{coaches,orders,catalog,notes,aliases,uploads});
+  Object.assign(state,{coaches,orders,catalog,notes,aliases,uploads,flags});
   recompute(); renderAll();
   const lc = uploads.filter(u=>u.kind==="coaches").pop();
   $("#listLabel").textContent = lc ? `${lc.detail?.list_name || lc.file_name} · ${coaches.length} coaches · list uploaded ${new Date(lc.uploaded_at).toLocaleString()}` : "No coach list loaded yet – use the Uploads tab";
@@ -356,6 +364,7 @@ function recompute(){
   }
   const aliasMap = new Map(); // cred -> Map(email_key -> status)
   for(const a of state.aliases){ if(!aliasMap.has(a.credential_number)) aliasMap.set(a.credential_number,new Map()); aliasMap.get(a.credential_number).set(a.email_key,a.status); }
+  const flagsBy = new Map(state.flags.map(f=>[f.credential_number,f]));
   const notesBy = new Map();
   for(const n of state.notes){ if(!notesBy.has(n.credential_number)) notesBy.set(n.credential_number,[]); notesBy.get(n.credential_number).push(n); }
 
@@ -394,7 +403,8 @@ function recompute(){
     const bgDays=daysUntil(c.bg_expiration), ssDays=daysUntil(c.ss_expiration);
     const bgOk = bgDays!==null ? bgDays>=0 : /pass|current/i.test(c.bg_status||"");
     const ssOk = ssDays!==null ? ssDays>=0 : /current|pass/i.test(c.ss_status||"");
-    rows.push({c, emails, items, off, adj, bgDays, ssDays, bgOk, ssOk, notes:(notesBy.get(c.credential_number)||[]).slice().sort((a,b)=>b.created_at.localeCompare(a.created_at)),
+    const fl = flagsBy.get(c.credential_number);
+    rows.push({c, emails, items, off, adj, bgDays, ssDays, bgOk, ssOk, recert: !!(fl && fl.recertified), flag: fl, notes:(notesBy.get(c.credential_number)||[]).slice().sort((a,b)=>b.created_at.localeCompare(a.created_at)),
       pending: suggestions.filter(s=>s.coach===c).length});
   }
   const lastName = n => { const parts=norm(n).split(" "); return parts[parts.length-1]+" "+parts[0]; };
@@ -410,7 +420,7 @@ function visibleRows(){
     if(q && !norm([r.c.name,r.c.email,r.c.phone,r.c.credential_number,r.c.city,r.c.state].join(" ")).includes(q)) return false;
     switch(state.quick){
       case "bgbad": return !r.bgOk; case "ssbad": return !r.ssOk; case "anybad": return !r.bgOk||!r.ssOk;
-      case "noceu": return r.off===0; case "selected": return state.selected.has(r.c.credential_number);
+      case "noceu": return r.off===0; case "recert": return r.recert; case "notrecert": return !r.recert; case "selected": return state.selected.has(r.c.credential_number);
     }
     return true;
   });
@@ -429,9 +439,9 @@ function renderCoaches(){
     const c=r.c;
     if(c.level_rank!==lastLv){ lastLv=c.level_rank; const n=rows.filter(x=>x.c.level_rank===lastLv).length; html+=`<tr class="level-head"><td colspan="9">${lvName[lastLv]||esc(c.level)} Coaches <span class="meta">(${n})</span></td></tr>`; }
     const sel=state.selected.has(c.credential_number), open=state.open.has(c.credential_number);
-    html+=`<tr class="coach ${sel?"sel":""}" data-cred="${esc(c.credential_number)}">
+    html+=`<tr class="coach ${sel?"sel":""} ${r.recert?"recert":""}" data-cred="${esc(c.credential_number)}" title="${r.recert?`Marked recertified by ${esc(r.flag.marked_by||"")} on ${new Date(r.flag.marked_at).toLocaleDateString()}. Click row to unmark.`:"Click row to mark as recertified"}">
       <td><input type="checkbox" class="rowsel" ${sel?"checked":""}></td>
-      <td class="name">${esc(c.name)}${r.pending?`<span class="flag" title="Possible name match awaiting review">?</span>`:""}${r.emails.size>1?`<span class="flag gray" title="Includes confirmed alternate email">+${r.emails.size-1}</span>`:""}<span class="cred">${esc(c.credential_number)} · ${esc(c.city||"")}${c.state?", "+esc(c.state):""}</span></td>
+      <td class="name">${esc(c.name)}${r.recert?`<span class="flag green">✓ Recertified</span>`:""}${r.pending?`<span class="flag" title="Possible name match awaiting review">?</span>`:""}${r.emails.size>1?`<span class="flag gray" title="Includes confirmed alternate email">+${r.emails.size-1}</span>`:""}<span class="cred">${esc(c.credential_number)} · ${esc(c.city||"")}${c.state?", "+esc(c.state):""}</span></td>
       <td class="email">${esc(c.email||"")}</td>
       <td class="phone">${esc(c.phone||"")}</td>
       <td>${validCell(r.bgOk,r.bgDays,c.bg_expiration,c.bg_status)}</td>
@@ -460,7 +470,7 @@ function detailHTML(r){
 function renderTiles(){
   const rows=state.computed.rows; const vis=visibleRows();
   const t=[
-    ["Coaches on list", rows.length, ""],["Showing", vis.length, ""],
+    ["Coaches on list", rows.length, ""],["Showing", vis.length, ""],["Recertified", rows.filter(r=>r.recert).length, "green"],
     ["BG check expired", rows.filter(r=>!r.bgOk).length, "red"],["SafeSport expired", rows.filter(r=>!r.ssOk).length, "red"],
     ["With official CEUs in range", rows.filter(r=>r.off>0).length, ""],["Orders loaded", state.orders.length, ""],
   ];
@@ -640,7 +650,7 @@ function exportSheet(){
     "City":r.c.city, "State":r.c.state,
     "Background Check Valid": r.bgOk?"Yes":"No", "BG Days Remaining": r.bgDays, "BG Expiration": r.c.bg_expiration,
     "SafeSport Valid": r.ssOk?"Yes":"No", "SafeSport Days Remaining": r.ssDays, "SafeSport Expiration": r.c.ss_expiration,
-    "Official CEUs": r.off, "Adjunct CEUs": r.adj, "Latest Note": r.notes[0]?.note || ""
+    "Official CEUs": r.off, "Adjunct CEUs": r.adj, "Recertified": r.recert?"Yes":"No", "Latest Note": r.notes[0]?.note || ""
   }));
   const ws=XLSX.utils.json_to_sheet(data); ws["!cols"]=Object.keys(data[0]||{}).map(k=>({wch:Math.max(12,k.length+2)}));
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Coaches");
@@ -684,7 +694,17 @@ function bind(){
       if(error){ toast("Could not delete: "+error.message,true); return; }
       state.notes=await fetchAll("coach_notes","*","id"); recompute(); renderCoaches(); return;
     }
-    if(e.target.closest("td.name")){ state.open.has(cred)? state.open.delete(cred) : state.open.add(cred); renderCoaches(); }
+    // Click on the row itself (not a control, not the notes accordion) toggles the shared recertified flag.
+    if(tr.classList.contains("coach") && !e.target.closest("input,button,a,select,textarea,label")){
+      const next = !r.recert;
+      const {error}=await sb.from("coach_flags").upsert({credential_number:cred,recertified:next,marked_by:state.user.email,marked_at:new Date().toISOString()});
+      if(error){ toast("Could not save: "+error.message,true); return; }
+      const i=state.flags.findIndex(f=>f.credential_number===cred);
+      const row={credential_number:cred,recertified:next,marked_by:state.user.email,marked_at:new Date().toISOString()};
+      if(i>=0) state.flags[i]=row; else state.flags.push(row);
+      recompute(); renderCoaches();
+      toast(next? `${r.c.name} marked as recertified.` : `${r.c.name} unmarked.`);
+    }
   });
 
   $("#nameMatches").addEventListener("click",async e=>{

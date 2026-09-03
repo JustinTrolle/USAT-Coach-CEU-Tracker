@@ -17,8 +17,10 @@ without signing in with an allow-listed staff account.
    - The checkbox in the *Background check* and *SafeSport* columns is ticked while the
      credential is valid, with days remaining next to it. Red means expired.
    - Click an **Official CEUs** or **Adjunct CEUs** number to see the courses behind it.
-   - Click **Notes** (or the coach's name) to open the notes accordion. Notes are shared and
-     saved with author and time.
+   - Click anywhere on a coach's row (not on a button or checkbox) to mark them as
+     **recertified**. The row turns light green for everyone; click again to unmark.
+     Filter with Show: Recertified / Not yet recertified.
+   - Click **Notes** to open the notes accordion. Notes are shared and saved with author and time.
    - The two date pickers set the order window used for CEU totals. Default is
      1 Dec 2024 to today.
 3. **Review** tab: two lists that need a human decision.
