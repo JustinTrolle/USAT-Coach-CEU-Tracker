@@ -122,6 +122,11 @@ tr.detail td{background:var(--blue-tint);padding:14px 16px 16px 46px}
 .upcard h3{margin-top:0}
 .upcard input[type=file]{margin:10px 0;font-size:.85rem;max-width:100%}
 .upcard .last{font-size:.8rem;color:var(--gray-mid)}
+.dropzone{border:2px dashed var(--gray-border);border-radius:4px;padding:16px;text-align:center;margin:10px 0;background:var(--gray-light);transition:background .15s,border-color .15s}
+.dropzone.drag{border-color:var(--usat-red);background:var(--red-tint)}
+.dropzone .hint{font-size:.85rem;color:var(--gray-mid);margin-bottom:8px}
+.dropzone input[type=file]{display:none}
+.dropzone label.btn{display:inline-block}
 .progress{height:6px;background:var(--gray-light);border-radius:3px;overflow:hidden;margin-top:8px}
 .progress i{display:block;height:100%;background:var(--usat-red);width:0;transition:width .2s}
 .inline{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
@@ -236,21 +241,21 @@ tr.detail td{background:var(--blue-tint);padding:14px 16px 16px 46px}
         <div class="upcard">
           <h3>Coach recert list (.xlsx)</h3>
           <p class="meta">The Salesforce "All Active Coaches Sorted by Level" export. Replaces the current list. Notes are kept by credential number.</p>
-          <input type="file" id="upCoaches" accept=".xlsx,.xls">
+          <div class="dropzone" data-kind="coaches"><div class="hint">Drag the .xlsx file here</div><label class="btn ghost sm" for="upCoaches">or choose file</label><input type="file" id="upCoaches" accept=".xlsx,.xls"></div>
           <div class="progress"><i id="pgCoaches"></i></div>
           <div class="last" id="lastCoaches"></div>
         </div>
         <div class="upcard">
           <h3>Thinkific orders (.csv or .xlsx)</h3>
           <p class="meta">Orders export. Existing orders are matched on Order ID, so a cumulative sheet simply adds the new ones.</p>
-          <input type="file" id="upOrders" accept=".csv,.xlsx,.xls">
+          <div class="dropzone" data-kind="orders"><div class="hint">Drag the .csv or .xlsx file here</div><label class="btn ghost sm" for="upOrders">or choose file</label><input type="file" id="upOrders" accept=".csv,.xlsx,.xls"></div>
           <div class="progress"><i id="pgOrders"></i></div>
           <div class="last" id="lastOrders"></div>
         </div>
         <div class="upcard">
           <h3>Education catalog (.xlsx)</h3>
           <p class="meta">"USA Triathlon Education Catalog" sheet. CEU column: a plain number is Official, a number followed by "a" is Adjunct.</p>
-          <input type="file" id="upCatalog" accept=".xlsx,.xls">
+          <div class="dropzone" data-kind="catalog"><div class="hint">Drag the .xlsx file here</div><label class="btn ghost sm" for="upCatalog">or choose file</label><input type="file" id="upCatalog" accept=".xlsx,.xls"></div>
           <div class="progress"><i id="pgCatalog"></i></div>
           <div class="last" id="lastCatalog"></div>
         </div>
@@ -294,9 +299,18 @@ const state = {
 
 /* ---------- toast / modal ---------- */
 let toastTimer;
-function toast(msg, err){ const h=$("#toastHost"); h.innerHTML=`<div class="toast ${err?"err":""}">${esc(msg)}</div>`; clearTimeout(toastTimer); toastTimer=setTimeout(()=>h.innerHTML="", err?6000:3000); }
+function toast(msg, err){ const h=$("#toastHost"); h.innerHTML=`<div class="toast ${err?"err":""}">${esc(msg)}${err?' <button class="btn ghost light sm" style="margin-left:10px" onclick="document.getElementById(\'toastHost\').innerHTML=\'\'">Dismiss</button>':""}</div>`; clearTimeout(toastTimer); toastTimer=setTimeout(()=>h.innerHTML="", err?15000:3000); }
 function modal(html){ $("#modalHost").innerHTML=`<div class="overlay" id="overlay"><div class="modal">${html}</div></div>`; $("#overlay").addEventListener("click",e=>{ if(e.target.id==="overlay") closeModal(); }); }
 function closeModal(){ $("#modalHost").innerHTML=""; }
+function confirmModal(title, body, okLabel="OK"){
+  return new Promise(resolve=>{
+    modal(`<h2>${esc(title)}</h2><p style="margin:10px 0 16px">${esc(body)}</p><div class="inline" style="justify-content:flex-end"><button class="btn ghost" id="cmCancel">Cancel</button><button class="btn red" id="cmOk">${esc(okLabel)}</button></div>`);
+    $("#cmOk").addEventListener("click",()=>{ closeModal(); resolve(true); });
+    $("#cmCancel").addEventListener("click",()=>{ closeModal(); resolve(false); });
+    $("#overlay").addEventListener("click",e=>{ if(e.target.id==="overlay") resolve(false); });
+    $("#cmOk").focus();
+  });
+}
 
 /* ---------- data loading ---------- */
 async function fetchAll(table, select="*", order="id"){
@@ -577,7 +591,8 @@ async function handleUpload(kind, file){
     if(kind==="coaches"){
       const {rows,listName}=parseCoaches(wb);
       if(!rows.length) throw new Error("No coach rows found.");
-      if(!confirm(`Replace the current coach list with ${rows.length} coaches from "${listName||file.name}"?\n\nNotes are kept.`)) { setProgress(pg,0); return; }
+      const ok = await confirmModal("Replace coach list?", `This will replace the current list of ${state.coaches.length} coaches with the ${rows.length} coaches in "${listName||file.name}". Notes are kept by credential number.`, "Replace list");
+      if(!ok){ setProgress(pg,0); return; }
       setProgress(pg,50);
       const {data,error}=await sb.rpc("replace_coaches",{p_rows:rows,p_list_name:listName||file.name,p_file_name:file.name});
       if(error) throw error;
@@ -712,6 +727,14 @@ function bind(){
   $("#upCoaches").addEventListener("change",e=>{ if(e.target.files[0]) handleUpload("coaches",e.target.files[0]); e.target.value=""; });
   $("#upOrders").addEventListener("change",e=>{ if(e.target.files[0]) handleUpload("orders",e.target.files[0]); e.target.value=""; });
   $("#upCatalog").addEventListener("change",e=>{ if(e.target.files[0]) handleUpload("catalog",e.target.files[0]); e.target.value=""; });
+  // Drag and drop onto any upload card.
+  $$(".dropzone").forEach(z=>{
+    ["dragenter","dragover"].forEach(ev=>z.addEventListener(ev,e=>{ e.preventDefault(); e.stopPropagation(); z.classList.add("drag"); }));
+    ["dragleave","dragend"].forEach(ev=>z.addEventListener(ev,e=>{ e.preventDefault(); z.classList.remove("drag"); }));
+    z.addEventListener("drop",e=>{ e.preventDefault(); e.stopPropagation(); z.classList.remove("drag"); const f=e.dataTransfer?.files?.[0]; if(f) handleUpload(z.dataset.kind,f); });
+  });
+  // Stop the browser from opening a file dropped outside a zone.
+  ["dragover","drop"].forEach(ev=>document.addEventListener(ev,e=>{ if(!e.target.closest(".dropzone")) e.preventDefault(); }));
 
   $("#logoutBtn").addEventListener("click",async()=>{ await sb.auth.signOut(); location.reload(); });
   $("#pwBtn").addEventListener("click",()=>passwordModal(false));

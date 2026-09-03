@@ -135,7 +135,8 @@ as $$
 declare n int;
 begin
   if not public.is_allowed() then raise exception 'not allowed'; end if;
-  delete from public.coaches;
+  -- "where true" satisfies pg_safeupdate, which the API role runs with.
+  delete from public.coaches where true;
   insert into public.coaches (credential_number, level, level_rank, name, city, state, type, status, phone, email,
                               bg_status, bg_expiration, ss_status, ss_expiration, active, list_name)
   select r->>'credential_number', r->>'level', (r->>'level_rank')::int, r->>'name', r->>'city', r->>'state',
