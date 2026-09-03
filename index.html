@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>USA Triathlon Coach CEU Tracker</title>
+<style>
+:root{
+  --usat-red:#A80C34;--usat-blue:#002A5C;--usat-blue-dark:#001F47;--usat-white:#fff;
+  --gray-dark:#1A1A1A;--gray-mid:#4A4A4A;--gray-light:#F2F2F2;--gray-border:#CCCCCC;
+  --red-tint:#F5E0E5;--blue-tint:#E6EAF0;--blue-tint2:#B3BFCF;
+  --font-heading:"Univers Black","Arial Black",Impact,sans-serif;
+  --font-body:"Univers Roman",Arial,Helvetica,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--font-body);color:var(--gray-dark);background:var(--gray-light);font-size:14px}
+h1,h2,h3,h4{font-family:var(--font-heading);color:var(--usat-blue);margin:0}
+button{font-family:var(--font-body);cursor:pointer}
+a{color:var(--usat-blue)}
+.hidden{display:none!important}
+
+/* top bar */
+.topbar{background:var(--usat-blue);color:#fff;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.topbar h1{color:#fff;font-size:1.25rem;letter-spacing:.2px}
+.topbar .sub{font-size:.8rem;opacity:.85}
+.topbar .user{font-size:.85rem;display:flex;gap:12px;align-items:center}
+.btn{border:0;border-radius:4px;padding:8px 14px;font-weight:700;font-size:.85rem;background:var(--usat-blue);color:#fff}
+.btn.red{background:var(--usat-red)}
+.btn.ghost{background:transparent;color:var(--usat-blue);border:1px solid var(--usat-blue)}
+.btn.ghost.light{color:#fff;border-color:rgba(255,255,255,.7)}
+.btn.sm{padding:5px 10px;font-size:.78rem}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* tabs */
+.tabs{background:#fff;border-bottom:1px solid var(--gray-border);padding:0 24px;display:flex;gap:4px}
+.tab{padding:12px 16px;border:0;background:transparent;font-weight:700;color:var(--gray-mid);border-bottom:3px solid transparent}
+.tab.active{color:var(--usat-blue);border-bottom-color:var(--usat-red)}
+.tab .pill{background:var(--usat-red);color:#fff;border-radius:10px;padding:1px 7px;font-size:.7rem;margin-left:6px}
+
+.page{padding:20px 24px;max-width:1500px;margin:0 auto}
+.card{background:#fff;border:1px solid var(--gray-border);border-radius:4px;padding:16px;margin-bottom:16px}
+.card h2{font-size:1.1rem;margin-bottom:10px}
+.card h3{font-size:.95rem;margin:12px 0 6px}
+.meta{font-size:.8rem;color:var(--gray-mid)}
+
+/* toolbar */
+.toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:.72rem;text-transform:uppercase;letter-spacing:.5px;color:var(--gray-mid);font-weight:700}
+input[type=text],input[type=date],input[type=number],input[type=password],input[type=email],select,textarea{
+  font-family:var(--font-body);font-size:.9rem;padding:7px 9px;border:1px solid var(--gray-border);border-radius:4px;background:#fff;color:var(--gray-dark)}
+input[type=text]{min-width:220px}
+.chips{display:flex;gap:6px}
+.chip{border:1px solid var(--usat-blue);background:#fff;color:var(--usat-blue);border-radius:14px;padding:5px 11px;font-size:.78rem;font-weight:700}
+.chip.on{background:var(--usat-blue);color:#fff}
+.spacer{flex:1}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+.tile{background:#fff;border:1px solid var(--gray-border);border-radius:4px;padding:12px 14px}
+.tile .n{font-family:var(--font-heading);font-size:1.6rem;color:var(--usat-blue)}
+.tile .n.red{color:var(--usat-red)}
+.tile .l{font-size:.75rem;color:var(--gray-mid);text-transform:uppercase;letter-spacing:.4px}
+
+/* table */
+.tablewrap{overflow-x:auto;background:#fff;border:1px solid var(--gray-border);border-radius:4px}
+table{border-collapse:collapse;width:100%;min-width:1100px}
+th{background:var(--usat-blue);color:#fff;text-align:left;padding:9px 10px;font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0;z-index:1}
+td{padding:8px 10px;border-bottom:1px solid #e6e6e6;vertical-align:middle}
+tr.level-head td{background:var(--blue-tint2);font-family:var(--font-heading);color:var(--usat-blue);font-size:.95rem;padding:10px}
+tr.coach:nth-child(even) td{background:#fafbfd}
+tr.coach:hover td{background:var(--blue-tint)}
+tr.coach.sel td{background:#fdf3f5}
+td.name{font-weight:700;white-space:nowrap}
+td.name .cred{display:block;font-weight:400;font-size:.72rem;color:var(--gray-mid)}
+td.email{font-size:.85rem;word-break:break-all}
+td.phone{white-space:nowrap;font-size:.85rem}
+.chk{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.box{width:16px;height:16px;border:2px solid var(--gray-border);border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff}
+.box.ok{background:var(--usat-blue);border-color:var(--usat-blue)}
+.box.bad{background:#fff;border-color:var(--usat-red)}
+.days{font-size:.8rem;color:var(--gray-mid)}
+.days.bad{color:var(--usat-red);font-weight:700}
+.days.soon{color:#8a5a00;font-weight:700}
+.ceu{border:1px solid var(--usat-blue);background:#fff;color:var(--usat-blue);font-family:var(--font-heading);font-size:1rem;border-radius:4px;min-width:52px;padding:5px 8px}
+.ceu.zero{color:var(--gray-mid);border-color:var(--gray-border)}
+.ceu.adj{border-color:var(--usat-red);color:var(--usat-red)}
+.ceu.adj.zero{color:var(--gray-mid);border-color:var(--gray-border)}
+.ceu:hover{background:var(--blue-tint)}
+.flag{display:inline-block;background:var(--usat-red);color:#fff;border-radius:10px;font-size:.68rem;padding:1px 6px;margin-left:6px;vertical-align:middle}
+.flag.gray{background:var(--gray-mid)}
+.notebtn{border:1px solid var(--gray-border);background:#fff;border-radius:4px;padding:5px 9px;font-size:.78rem;color:var(--usat-blue);font-weight:700;white-space:nowrap}
+tr.detail td{background:var(--blue-tint);padding:14px 16px 16px 46px}
+.notes{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.note{background:#fff;border:1px solid var(--gray-border);border-radius:4px;padding:8px 10px;margin-bottom:6px;font-size:.88rem}
+.note .who{font-size:.72rem;color:var(--gray-mid);margin-top:4px}
+.noteform textarea{width:100%;min-height:70px;resize:vertical}
+.noteform .row{display:flex;justify-content:flex-end;margin-top:6px}
+.smalltable{min-width:0}
+.smalltable td,.smalltable th{padding:6px 8px;font-size:.85rem}
+
+/* modal */
+.overlay{position:fixed;inset:0;background:rgba(0,31,71,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal{background:#fff;border-radius:4px;max-width:760px;width:100%;max-height:90vh;overflow:auto;padding:20px}
+.modal h2{font-size:1.1rem;margin-bottom:4px}
+.modal .close{float:right}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--usat-blue-dark);color:#fff;padding:10px 18px;border-radius:4px;font-size:.9rem;z-index:60;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.toast.err{background:var(--usat-red)}
+
+/* login */
+.login{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--usat-blue)}
+.login .card{width:360px;padding:26px}
+.login h1{font-size:1.3rem;margin-bottom:4px}
+.login .field{margin-top:12px}
+.login input{width:100%}
+.login .btn{width:100%;margin-top:16px}
+.err{color:var(--usat-red);font-size:.85rem;margin-top:8px}
+
+/* upload cards */
+.upgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.upcard{border:1px solid var(--gray-border);border-radius:4px;padding:14px;background:#fff}
+.upcard h3{margin-top:0}
+.upcard input[type=file]{margin:10px 0;font-size:.85rem;max-width:100%}
+.upcard .last{font-size:.8rem;color:var(--gray-mid)}
+.progress{height:6px;background:var(--gray-light);border-radius:3px;overflow:hidden;margin-top:8px}
+.progress i{display:block;height:100%;background:var(--usat-red);width:0;transition:width .2s}
+.inline{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.inline input[type=number]{width:70px}
+.dup{color:var(--gray-mid);font-size:.78rem}
+@media (max-width:900px){.notes{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<!-- ============ LOGIN ============ -->
+<div id="loginView" class="login hidden">
+  <div class="card">
+    <h1>USA Triathlon</h1>
+    <div class="meta">Coach CEU &amp; Recertification Tracker</div>
+    <div class="field"><label>Email</label><input id="loginEmail" type="email" autocomplete="username"></div>
+    <div class="field"><label>Password</label><input id="loginPass" type="password" autocomplete="current-password"></div>
+    <button id="loginBtn" class="btn red">Sign in</button>
+    <div id="loginErr" class="err"></div>
+  </div>
+</div>
+
+<!-- ============ APP ============ -->
+<div id="appView" class="hidden">
+  <div class="topbar">
+    <div>
+      <h1>USA Triathlon · Coach CEU Tracker</h1>
+      <div class="sub" id="listLabel">No coach list loaded yet</div>
+    </div>
+    <div class="user"><span id="userEmail"></span><button id="pwBtn" class="btn ghost light sm">Change password</button><button id="logoutBtn" class="btn ghost light sm">Sign out</button></div>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-tab="coaches">Coaches</button>
+    <button class="tab" data-tab="review">Review <span id="reviewCount" class="pill hidden"></span></button>
+    <button class="tab" data-tab="catalog">Catalog</button>
+    <button class="tab" data-tab="uploads">Uploads</button>
+  </div>
+
+  <div class="page">
+    <!-- ---------- COACHES ---------- -->
+    <section id="tab-coaches">
+      <div class="card">
+        <div class="toolbar">
+          <div class="field"><label>Orders from</label><input type="date" id="dateFrom"></div>
+          <div class="field"><label>Orders to</label><input type="date" id="dateTo"></div>
+          <div class="field"><label>Search</label><input type="text" id="search" placeholder="Name, email, phone, credential"></div>
+          <div class="field"><label>Level</label>
+            <div class="chips"><button class="chip on" data-lv="3">Level III</button><button class="chip on" data-lv="2">Level II</button><button class="chip on" data-lv="1">Level I</button></div>
+          </div>
+          <div class="field"><label>Show</label>
+            <select id="quickFilter">
+              <option value="all">All coaches</option>
+              <option value="bgbad">Background check expired</option>
+              <option value="ssbad">SafeSport expired</option>
+              <option value="anybad">Either expired</option>
+              <option value="noceu">No official CEUs in range</option>
+              <option value="selected">Selected only</option>
+            </select>
+          </div>
+          <div class="spacer"></div>
+          <div class="field"><label>&nbsp;</label><div class="inline">
+            <button id="copyEmails" class="btn ghost" disabled>Copy emails</button>
+            <button id="exportBtn" class="btn red" disabled>Email sheet (0)</button>
+          </div></div>
+        </div>
+      </div>
+      <div class="tiles" id="tiles"></div>
+      <div class="tablewrap">
+        <table id="coachTable">
+          <thead><tr>
+            <th style="width:36px"><input type="checkbox" id="selAll" title="Select all visible"></th>
+            <th>Coach</th><th>Email</th><th>Phone</th>
+            <th>Background check</th><th>SafeSport</th>
+            <th>Official CEUs</th><th>Adjunct CEUs</th><th>Notes</th>
+          </tr></thead>
+          <tbody id="coachBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ---------- REVIEW ---------- -->
+    <section id="tab-review" class="hidden">
+      <div class="card">
+        <h2>Possible matches by name</h2>
+        <p class="meta">These Thinkific orders were placed under a coach's exact name but a different email. Confirm to count their purchases for that coach, or reject to hide.</p>
+        <div id="nameMatches"></div>
+      </div>
+      <div class="card">
+        <h2>Products bought by coaches that are not in the catalog</h2>
+        <p class="meta">These orders currently count as zero CEUs. Add a product to the catalog to start counting it. Products set to "none" are simply ignored.</p>
+        <div id="unmapped"></div>
+      </div>
+    </section>
+
+    <!-- ---------- CATALOG ---------- -->
+    <section id="tab-catalog" class="hidden">
+      <div class="card">
+        <div class="toolbar">
+          <div class="field"><label>Search catalog</label><input type="text" id="catSearch" placeholder="Product name or code"></div>
+          <div class="field"><label>Type</label><select id="catType"><option value="">All</option><option value="official">Official</option><option value="adjunct">Adjunct</option><option value="none">None (0)</option></select></div>
+          <div class="spacer"></div>
+          <div class="field"><label>&nbsp;</label><button id="addProductBtn" class="btn">Add product manually</button></div>
+        </div>
+        <p class="meta" style="margin-top:8px">Edit a CEU value or type inline and it saves immediately. Uploaded rows are replaced when a new catalog is uploaded. Manual rows are kept.</p>
+      </div>
+      <div class="tablewrap"><table class="smalltable" id="catTable"><thead><tr><th>Code</th><th>Product</th><th>Type</th><th>CEUs</th><th>CEU type</th><th>Price</th><th>Source</th><th></th></tr></thead><tbody id="catBody"></tbody></table></div>
+    </section>
+
+    <!-- ---------- UPLOADS ---------- -->
+    <section id="tab-uploads" class="hidden">
+      <div class="upgrid">
+        <div class="upcard">
+          <h3>Coach recert list (.xlsx)</h3>
+          <p class="meta">The Salesforce "All Active Coaches Sorted by Level" export. Replaces the current list. Notes are kept by credential number.</p>
+          <input type="file" id="upCoaches" accept=".xlsx,.xls">
+          <div class="progress"><i id="pgCoaches"></i></div>
+          <div class="last" id="lastCoaches"></div>
+        </div>
+        <div class="upcard">
+          <h3>Thinkific orders (.csv or .xlsx)</h3>
+          <p class="meta">Orders export. Existing orders are matched on Order ID, so a cumulative sheet simply adds the new ones.</p>
+          <input type="file" id="upOrders" accept=".csv,.xlsx,.xls">
+          <div class="progress"><i id="pgOrders"></i></div>
+          <div class="last" id="lastOrders"></div>
+        </div>
+        <div class="upcard">
+          <h3>Education catalog (.xlsx)</h3>
+          <p class="meta">"USA Triathlon Education Catalog" sheet. CEU column: a plain number is Official, a number followed by "a" is Adjunct.</p>
+          <input type="file" id="upCatalog" accept=".xlsx,.xls">
+          <div class="progress"><i id="pgCatalog"></i></div>
+          <div class="last" id="lastCatalog"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h2>Upload history</h2>
+        <div class="tablewrap" style="border:0"><table class="smalltable"><thead><tr><th>When</th><th>Type</th><th>File</th><th>Rows</th><th>By</th></tr></thead><tbody id="uploadHistory"></tbody></table></div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="modalHost"></div>
+<div id="toastHost"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script>
+/* ======================= CONFIG ======================= */
+const SUPABASE_URL = "https://hbplxdyfrndpiclkqqpo.supabase.co";
+const SUPABASE_KEY = "sb_publishable_2lU5a7DsDcGR0UNAaPKrNQ_1moN3REK";
+const DEFAULT_FROM = "2024-12-01";
+/* ====================================================== */
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const $ = (s, el=document) => el.querySelector(s);
+const $$ = (s, el=document) => [...el.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm = s => String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+const todayISO = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+const parseISO = s => { if(!s) return null; const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
+const fmtDate = s => { const d=parseISO(s); return d? d.toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : ""; };
+const daysUntil = s => { const d=parseISO(s); if(!d) return null; const t=new Date(); t.setHours(0,0,0,0); return Math.round((d-t)/86400000); };
+
+const state = {
+  user:null, coaches:[], orders:[], catalog:[], notes:[], aliases:[], uploads:[],
+  selected:new Set(), open:new Set(), levels:new Set([1,2,3]), search:"", quick:"all",
+  from: localStorage.getItem("ceu.from") || DEFAULT_FROM, to: localStorage.getItem("ceu.to") || todayISO(),
+  computed:null, catSearch:"", catType:""
+};
+
+/* ---------- toast / modal ---------- */
+let toastTimer;
+function toast(msg, err){ const h=$("#toastHost"); h.innerHTML=`<div class="toast ${err?"err":""}">${esc(msg)}</div>`; clearTimeout(toastTimer); toastTimer=setTimeout(()=>h.innerHTML="", err?6000:3000); }
+function modal(html){ $("#modalHost").innerHTML=`<div class="overlay" id="overlay"><div class="modal">${html}</div></div>`; $("#overlay").addEventListener("click",e=>{ if(e.target.id==="overlay") closeModal(); }); }
+function closeModal(){ $("#modalHost").innerHTML=""; }
+
+/* ---------- data loading ---------- */
+async function fetchAll(table, select="*", order="id"){
+  const out=[]; const page=1000;
+  for(let i=0;;i+=page){
+    const {data,error}=await sb.from(table).select(select).order(order,{ascending:true}).range(i,i+page-1);
+    if(error) throw error;
+    out.push(...data);
+    if(data.length<page) break;
+  }
+  return out;
+}
+async function loadAll(){
+  toast("Loading data…");
+  const [coaches, orders, catalog, notes, aliases, uploads] = await Promise.all([
+    fetchAll("coaches","*","credential_number"),
+    fetchAll("orders","*","order_id"),
+    fetchAll("catalog_products","*","id"),
+    fetchAll("coach_notes","*","id"),
+    fetchAll("coach_aliases","*","credential_number"),
+    fetchAll("uploads","*","id"),
+  ]);
+  Object.assign(state,{coaches,orders,catalog,notes,aliases,uploads});
+  recompute(); renderAll();
+  const lc = uploads.filter(u=>u.kind==="coaches").pop();
+  $("#listLabel").textContent = lc ? `${lc.detail?.list_name || lc.file_name} · ${coaches.length} coaches · list uploaded ${new Date(lc.uploaded_at).toLocaleString()}` : "No coach list loaded yet – use the Uploads tab";
+  $("#toastHost").innerHTML="";
+}
+
+/* ---------- computation ---------- */
+function recompute(){
+  const catByKey = new Map(state.catalog.map(p=>[p.name_key,p]));
+  const ordersByEmail = new Map(), ordersByName = new Map();
+  for(const o of state.orders){
+    if(o.email_key){ if(!ordersByEmail.has(o.email_key)) ordersByEmail.set(o.email_key,[]); ordersByEmail.get(o.email_key).push(o); }
+    if(o.student_key){ if(!ordersByName.has(o.student_key)) ordersByName.set(o.student_key,[]); ordersByName.get(o.student_key).push(o); }
+  }
+  const aliasMap = new Map(); // cred -> Map(email_key -> status)
+  for(const a of state.aliases){ if(!aliasMap.has(a.credential_number)) aliasMap.set(a.credential_number,new Map()); aliasMap.get(a.credential_number).set(a.email_key,a.status); }
+  const notesBy = new Map();
+  for(const n of state.notes){ if(!notesBy.has(n.credential_number)) notesBy.set(n.credential_number,[]); notesBy.get(n.credential_number).push(n); }
+
+  const from=state.from, to=state.to;
+  const inRange = o => o.order_date && (!from || o.order_date>=from) && (!to || o.order_date<=to);
+  const unmapped = new Map(); // product_key -> {name,count,coaches:Set}
+  const suggestions = []; // {coach, email_key, orders:[]}
+  const rows = [];
+  for(const c of state.coaches){
+    const al = aliasMap.get(c.credential_number) || new Map();
+    const emails = new Set(); if(c.email_key) emails.add(c.email_key);
+    for(const [k,v] of al) if(v==="confirmed") emails.add(k);
+    // name-fallback suggestions
+    if(c.name_key && ordersByName.has(c.name_key)){
+      const byEmail = new Map();
+      for(const o of ordersByName.get(c.name_key)){
+        if(!o.email_key || emails.has(o.email_key) || al.get(o.email_key)==="rejected") continue;
+        if(!byEmail.has(o.email_key)) byEmail.set(o.email_key,[]); byEmail.get(o.email_key).push(o);
+      }
+      for(const [k,os] of byEmail) suggestions.push({coach:c,email_key:k,orders:os});
+    }
+    // tally
+    const items=[]; const seen=new Map();
+    let off=0, adj=0;
+    const allOrders=[]; for(const e of emails) allOrders.push(...(ordersByEmail.get(e)||[]));
+    allOrders.sort((a,b)=>(a.order_date||"").localeCompare(b.order_date||""));
+    for(const o of allOrders){
+      if(!inRange(o)) continue;
+      const p=catByKey.get(o.product_key);
+      if(!p){ const u=unmapped.get(o.product_key)||{name:o.product,count:0,coaches:new Set()}; u.count++; u.coaches.add(c.name); unmapped.set(o.product_key,u); items.push({o,p:null,type:"unmapped",value:0,dup:false}); continue; }
+      const dup = seen.has(o.product_key); seen.set(o.product_key,true);
+      const type = p.ceu_type; const value = dup||type==="none" ? 0 : Number(p.ceu_value)||0;
+      if(type==="official") off+=value; else if(type==="adjunct") adj+=value;
+      items.push({o,p,type,value,dup});
+    }
+    const bgDays=daysUntil(c.bg_expiration), ssDays=daysUntil(c.ss_expiration);
+    const bgOk = bgDays!==null ? bgDays>=0 : /pass|current/i.test(c.bg_status||"");
+    const ssOk = ssDays!==null ? ssDays>=0 : /current|pass/i.test(c.ss_status||"");
+    rows.push({c, emails, items, off, adj, bgDays, ssDays, bgOk, ssOk, notes:(notesBy.get(c.credential_number)||[]).slice().sort((a,b)=>b.created_at.localeCompare(a.created_at)),
+      pending: suggestions.filter(s=>s.coach===c).length});
+  }
+  const lastName = n => { const parts=norm(n).split(" "); return parts[parts.length-1]+" "+parts[0]; };
+  rows.sort((a,b)=> b.c.level_rank-a.c.level_rank || lastName(a.c.name).localeCompare(lastName(b.c.name)));
+  state.computed={rows, unmapped, suggestions};
+}
+
+/* ---------- rendering: coaches ---------- */
+function visibleRows(){
+  const q=norm(state.search);
+  return state.computed.rows.filter(r=>{
+    if(!state.levels.has(r.c.level_rank)) return false;
+    if(q && !norm([r.c.name,r.c.email,r.c.phone,r.c.credential_number,r.c.city,r.c.state].join(" ")).includes(q)) return false;
+    switch(state.quick){
+      case "bgbad": return !r.bgOk; case "ssbad": return !r.ssOk; case "anybad": return !r.bgOk||!r.ssOk;
+      case "noceu": return r.off===0; case "selected": return state.selected.has(r.c.credential_number);
+    }
+    return true;
+  });
+}
+function validCell(ok, days, dateStr, status){
+  let cls="days", txt="";
+  if(days===null) txt = status ? esc(status) : "no date";
+  else if(days<0){ cls+=" bad"; txt=`expired ${-days}d ago`; }
+  else { if(days<=60) cls+=" soon"; txt=`${days} days`; }
+  return `<span class="chk" title="${esc(status||"")} · ${esc(fmtDate(dateStr))}"><span class="box ${ok?"ok":"bad"}">${ok?"✓":""}</span><span class="${cls}">${txt}</span></span>`;
+}
+function renderCoaches(){
+  const rows=visibleRows(); const body=$("#coachBody"); const lvName={3:"Level III",2:"Level II",1:"Level I"};
+  let html="", lastLv=null;
+  for(const r of rows){
+    const c=r.c;
+    if(c.level_rank!==lastLv){ lastLv=c.level_rank; const n=rows.filter(x=>x.c.level_rank===lastLv).length; html+=`<tr class="level-head"><td colspan="9">${lvName[lastLv]||esc(c.level)} Coaches <span class="meta">(${n})</span></td></tr>`; }
+    const sel=state.selected.has(c.credential_number), open=state.open.has(c.credential_number);
+    html+=`<tr class="coach ${sel?"sel":""}" data-cred="${esc(c.credential_number)}">
+      <td><input type="checkbox" class="rowsel" ${sel?"checked":""}></td>
+      <td class="name">${esc(c.name)}${r.pending?`<span class="flag" title="Possible name match awaiting review">?</span>`:""}${r.emails.size>1?`<span class="flag gray" title="Includes confirmed alternate email">+${r.emails.size-1}</span>`:""}<span class="cred">${esc(c.credential_number)} · ${esc(c.city||"")}${c.state?", "+esc(c.state):""}</span></td>
+      <td class="email">${esc(c.email||"")}</td>
+      <td class="phone">${esc(c.phone||"")}</td>
+      <td>${validCell(r.bgOk,r.bgDays,c.bg_expiration,c.bg_status)}</td>
+      <td>${validCell(r.ssOk,r.ssDays,c.ss_expiration,c.ss_status)}</td>
+      <td><button class="ceu ${r.off?"":"zero"}" data-kind="official" title="Show official CEU courses">${fmtNum(r.off)}</button></td>
+      <td><button class="ceu adj ${r.adj?"":"zero"}" data-kind="adjunct" title="Show adjunct CEU courses">${fmtNum(r.adj)}</button></td>
+      <td><button class="notebtn">${open?"▾":"▸"} Notes${r.notes.length?` (${r.notes.length})`:""}</button></td>
+    </tr>`;
+    if(open) html+=`<tr class="detail" data-cred="${esc(c.credential_number)}"><td colspan="9">${detailHTML(r)}</td></tr>`;
+  }
+  body.innerHTML = html || `<tr><td colspan="9" class="meta" style="padding:20px">No coaches match. ${state.coaches.length? "" : "Upload a coach list from the Uploads tab."}</td></tr>`;
+  $("#selAll").checked = rows.length>0 && rows.every(r=>state.selected.has(r.c.credential_number));
+  const n=state.selected.size; $("#exportBtn").textContent=`Email sheet (${n})`; $("#exportBtn").disabled=!n; $("#copyEmails").disabled=!n;
+  renderTiles();
+}
+function fmtNum(n){ return Number.isInteger(n)? n : n.toFixed(1); }
+function detailHTML(r){
+  const notes = r.notes.map(n=>`<div class="note">${esc(n.note).replace(/\n/g,"<br>")}<div class="who">${esc(n.author_email||"")} · ${new Date(n.created_at).toLocaleString()} <button class="btn ghost sm delnote" data-id="${n.id}" style="padding:1px 6px;margin-left:6px">delete</button></div></div>`).join("") || `<div class="meta">No notes yet.</div>`;
+  const emails=[...r.emails].map(e=>esc(e)).join(", ");
+  return `<div class="notes">
+    <div><h3>Recertification notes</h3>${notes}</div>
+    <div><h3>Add a note</h3><div class="noteform"><textarea placeholder="e.g. Emailed about SafeSport renewal 9/2"></textarea><div class="row"><button class="btn red sm savenote">Save note</button></div></div>
+      <h3>Details</h3><div class="meta">Matched Thinkific emails: ${emails||"none"}<br>Orders in range: ${r.items.length} · Background check: ${esc(r.c.bg_status||"")} ${esc(fmtDate(r.c.bg_expiration))} · SafeSport: ${esc(r.c.ss_status||"")} ${esc(fmtDate(r.c.ss_expiration))}</div></div>
+  </div>`;
+}
+function renderTiles(){
+  const rows=state.computed.rows; const vis=visibleRows();
+  const t=[
+    ["Coaches on list", rows.length, ""],["Showing", vis.length, ""],
+    ["BG check expired", rows.filter(r=>!r.bgOk).length, "red"],["SafeSport expired", rows.filter(r=>!r.ssOk).length, "red"],
+    ["With official CEUs in range", rows.filter(r=>r.off>0).length, ""],["Orders loaded", state.orders.length, ""],
+  ];
+  $("#tiles").innerHTML=t.map(([l,n,c])=>`<div class="tile"><div class="n ${c}">${n}</div><div class="l">${l}</div></div>`).join("");
+}
+function showCeuModal(r, kind){
+  const items=r.items.filter(i=> kind==="official" ? (i.type==="official") : (i.type==="adjunct"));
+  const total = kind==="official"? r.off : r.adj;
+  const rows = items.map(i=>`<tr><td>${esc(fmtDate(i.o.order_date))}</td><td>${esc(i.o.product)}${i.dup?` <span class="dup">(duplicate purchase – not counted again)</span>`:""}</td><td>${esc(i.o.email)}</td><td style="text-align:right">${i.dup?0:fmtNum(Number(i.p.ceu_value))}</td></tr>`).join("");
+  const others = r.items.filter(i=>i.type==="unmapped"||i.type==="none");
+  modal(`<button class="btn ghost sm close" onclick="closeModal()">Close</button>
+    <h2>${esc(r.c.name)} · ${kind==="official"?"Official":"Adjunct"} CEUs</h2>
+    <div class="meta">${fmtDate(state.from)} – ${fmtDate(state.to)} · total <b>${fmtNum(total)}</b></div>
+    <table class="smalltable" style="margin-top:10px"><thead><tr><th>Date</th><th>Product</th><th>Email used</th><th style="text-align:right">CEUs</th></tr></thead>
+    <tbody>${rows || `<tr><td colspan="4" class="meta">No ${kind} CEU purchases in this date range.</td></tr>`}</tbody></table>
+    ${others.length?`<h3 style="margin-top:14px">Other purchases in range (0 CEUs)</h3><table class="smalltable"><tbody>${others.map(i=>`<tr><td>${esc(fmtDate(i.o.order_date))}</td><td>${esc(i.o.product)}</td><td class="meta">${i.type==="unmapped"?"not in catalog":"catalog type: none"}</td></tr>`).join("")}</tbody></table>`:""}`);
+}
+
+/* ---------- rendering: review ---------- */
+function renderReview(){
+  const {suggestions, unmapped}=state.computed;
+  $("#reviewCount").textContent = suggestions.length + unmapped.size;
+  $("#reviewCount").classList.toggle("hidden", suggestions.length+unmapped.size===0);
+  $("#nameMatches").innerHTML = suggestions.length ? `<div class="tablewrap" style="border:0"><table class="smalltable"><thead><tr><th>Coach</th><th>Coach email</th><th>Thinkific email</th><th>Orders</th><th>Example</th><th></th></tr></thead><tbody>` +
+    suggestions.map((s,i)=>`<tr><td><b>${esc(s.coach.name)}</b><br><span class="meta">${esc(s.coach.level)} · ${esc(s.coach.credential_number)}</span></td><td>${esc(s.coach.email||"")}</td><td>${esc(s.email_key)}</td><td>${s.orders.length}</td><td class="meta">${esc(s.orders[0].product)} (${esc(fmtDate(s.orders[0].order_date))})</td>
+      <td class="inline"><button class="btn sm alias" data-i="${i}" data-status="confirmed">Confirm</button><button class="btn ghost sm alias" data-i="${i}" data-status="rejected">Reject</button></td></tr>`).join("") + `</tbody></table></div>` : `<div class="meta">Nothing to review.</div>`;
+  const um=[...unmapped.entries()].sort((a,b)=>b[1].count-a[1].count);
+  $("#unmapped").innerHTML = um.length ? `<div class="tablewrap" style="border:0"><table class="smalltable"><thead><tr><th>Product</th><th>Orders</th><th>Coaches</th><th>Add to catalog</th></tr></thead><tbody>` +
+    um.map(([k,u])=>`<tr><td>${esc(u.name)}</td><td>${u.count}</td><td class="meta">${esc([...u.coaches].slice(0,3).join(", "))}${u.coaches.size>3?" …":""}</td>
+      <td class="inline"><input type="number" step="0.5" min="0" value="0" class="um-val"><select class="um-type"><option value="official">Official</option><option value="adjunct">Adjunct</option><option value="none">None</option></select><button class="btn sm um-add" data-name="${esc(u.name)}">Save</button></td></tr>`).join("") + `</tbody></table></div>` : `<div class="meta">Every product bought by a listed coach in this date range is in the catalog.</div>`;
+}
+
+/* ---------- rendering: catalog ---------- */
+function renderCatalog(){
+  const q=norm(state.catSearch);
+  const list=state.catalog.filter(p=>(!q || norm(p.name+" "+(p.product_code||"")).includes(q)) && (!state.catType || p.ceu_type===state.catType))
+    .sort((a,b)=>String(a.product_code||"").localeCompare(String(b.product_code||"")) || a.name.localeCompare(b.name));
+  $("#catBody").innerHTML = list.map(p=>`<tr data-id="${p.id}"><td>${esc(p.product_code||"")}</td><td>${esc(p.name)}</td><td class="meta">${esc(p.product_type||"")}</td>
+    <td><input type="number" step="0.5" min="0" value="${p.ceu_value}" class="cat-val" style="width:70px"></td>
+    <td><select class="cat-type"><option value="official" ${p.ceu_type==="official"?"selected":""}>Official</option><option value="adjunct" ${p.ceu_type==="adjunct"?"selected":""}>Adjunct</option><option value="none" ${p.ceu_type==="none"?"selected":""}>None</option></select></td>
+    <td class="meta">${esc(p.price||"")}</td><td class="meta">${p.source}${p.ceu_raw!=null&&p.ceu_raw!==""?` · sheet: ${esc(p.ceu_raw)}`:""}</td>
+    <td>${p.source==="manual"?`<button class="btn ghost sm cat-del">Delete</button>`:""}</td></tr>`).join("") || `<tr><td colspan="8" class="meta" style="padding:16px">No products. Upload the catalog from the Uploads tab.</td></tr>`;
+}
+
+/* ---------- rendering: uploads ---------- */
+function renderUploads(){
+  const h=state.uploads.slice().reverse();
+  $("#uploadHistory").innerHTML = h.map(u=>`<tr><td>${new Date(u.uploaded_at).toLocaleString()}</td><td>${u.kind}</td><td>${esc(u.file_name||"")}</td><td>${u.row_count??""}</td><td>${esc(u.uploaded_by||"")}</td></tr>`).join("") || `<tr><td colspan="5" class="meta">No uploads yet.</td></tr>`;
+  for(const k of ["coaches","orders","catalog"]){ const last=state.uploads.filter(u=>u.kind===k).pop(); $("#last"+k[0].toUpperCase()+k.slice(1)).textContent = last? `Last: ${esc(last.file_name||"")} · ${last.row_count} rows · ${new Date(last.uploaded_at).toLocaleString()} by ${last.uploaded_by||""}` : "Never uploaded"; }
+}
+function renderAll(){ renderCoaches(); renderReview(); renderCatalog(); renderUploads(); }
+
+/* ---------- parsing uploads ---------- */
+function readWorkbook(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onerror=rej; fr.onload=e=>{ try{ res(XLSX.read(e.target.result,{type:"array",raw:true,cellDates:false})); }catch(err){ rej(err); } }; fr.readAsArrayBuffer(file); }); }
+function toISODate(v){
+  if(v==null||v==="") return "";
+  if(v instanceof Date) return isNaN(v)? "" : `${v.getFullYear()}-${String(v.getMonth()+1).padStart(2,"0")}-${String(v.getDate()).padStart(2,"0")}`;
+  const s=String(v).trim();
+  let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m) return `${m[1]}-${m[2].padStart(2,"0")}-${m[3].padStart(2,"0")}`;
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if(m) return `${m[3]}-${m[1].padStart(2,"0")}-${m[2].padStart(2,"0")}`;
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/); if(m) return `20${m[3]}-${m[1].padStart(2,"0")}-${m[2].padStart(2,"0")}`;
+  if(typeof v==="number"){ const d=XLSX.SSF.parse_date_code(v); if(d) return `${d.y}-${String(d.m).padStart(2,"0")}-${String(d.d).padStart(2,"0")}`; }
+  return "";
+}
+function levelRank(s){ const t=norm(s); if(/\b(iii|3)\b/.test(t)) return 3; if(/\b(ii|2)\b/.test(t)) return 2; if(/\b(i|1)\b/.test(t)) return 1; return 1; }
+
+function parseCoaches(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]]; const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true});
+  const hi=rows.findIndex(r=>r&&r.some(c=>typeof c==="string"&&/credential number/i.test(c)));
+  if(hi<0) throw new Error("Could not find the header row (looking for 'Credential Number').");
+  const hdr=rows[hi].map(h=>norm(h));
+  const col=(...names)=>{ for(const n of names){ const i=hdr.findIndex(h=>h && h.includes(n)); if(i>=0) return i; } return -1; };
+  const C={level:col("level"),cred:col("credential number"),name:col("account name","name"),city:col("city"),state:col("state"),type:col("type"),status:col("status"),phone:col("phone"),email:col("email"),bgs:col("background check status"),bgx:col("background check expiration"),sss:col("safesport status"),ssx:col("safesport expiration"),active:col("active")};
+  if(C.cred<0||C.email<0) throw new Error("Sheet is missing Credential Number or Email columns.");
+  const listName = (rows.slice(0,hi).flat().find(c=>typeof c==="string" && c.trim() && !/^as of|filtered|show:|equals|not equal/i.test(c.trim())) || "").toString().trim();
+  let level="Level I", out=[];
+  for(const r of rows.slice(hi+1)){
+    if(!r) continue;
+    const lv=C.level>=0? r[C.level] : null;
+    if(lv && /^total/i.test(String(lv))) break;
+    if(lv && String(lv).trim()) level=String(lv).trim();
+    const cred=r[C.cred]; if(!cred||!String(cred).trim()) continue;
+    const g=i=> i>=0 && r[i]!=null ? String(r[i]).trim() : "";
+    out.push({credential_number:g(C.cred), level, level_rank:levelRank(level), name:g(C.name), city:g(C.city), state:g(C.state), type:g(C.type), status:g(C.status), phone:g(C.phone), email:g(C.email),
+      bg_status:g(C.bgs), bg_expiration:toISODate(r[C.bgx]), ss_status:g(C.sss), ss_expiration:toISODate(r[C.ssx]), active: /true|1|yes/i.test(g(C.active)||"true")});
+  }
+  return {rows:out, listName};
+}
+function parseOrders(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]]; const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true});
+  const hi=rows.findIndex(r=>r&&r.some(c=>typeof c==="string"&&/^order id$/i.test(c.trim())));
+  if(hi<0) throw new Error("Could not find the 'Order ID' header. Is this the Thinkific orders export?");
+  const hdr=rows[hi].map(h=>norm(h)); const col=n=>hdr.indexOf(n);
+  const C={id:col("order id"),num:col("order #"),student:col("student"),email:col("email"),date:col("order date"),value:col("current value"),status:col("status"),pay:col("payment method"),product:col("product"),inst:col("instructors"),coupon:col("coupon code"),uid:col("user id")};
+  if(C.id<0||C.email<0||C.product<0) throw new Error("Orders sheet is missing Order ID, Email or Product columns.");
+  const out=[];
+  for(const r of rows.slice(hi+1)){
+    if(!r||r[C.id]==null||String(r[C.id]).trim()==="") continue;
+    const g=i=> i>=0 && r[i]!=null ? String(r[i]).trim() : "";
+    out.push({order_id:String(r[C.id]).replace(/\D/g,""), order_number:g(C.num), student:g(C.student), email:g(C.email), order_date:toISODate(r[C.date]), current_value:g(C.value).replace(/[^0-9.\-]/g,""), status:g(C.status), payment_method:g(C.pay), product:g(C.product), instructors:g(C.inst), coupon_code:g(C.coupon), user_id:g(C.uid)});
+  }
+  return out;
+}
+function parseCeu(raw){
+  const s=String(raw??"").trim().toLowerCase();
+  if(!s) return {value:0,type:"none"};
+  const m=s.match(/^(\d+(?:\.\d+)?)\s*(a)?/); if(!m) return {value:0,type:"none"};
+  const v=parseFloat(m[1]); if(!v) return {value:0,type:"none"};
+  return {value:v, type: m[2]?"adjunct":"official"};
+}
+function parseCatalog(wb){
+  const ws=wb.Sheets[wb.SheetNames[0]]; const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:true});
+  const hi=rows.findIndex(r=>r&&r.some(c=>typeof c==="string"&&/product name/i.test(c)));
+  if(hi<0) throw new Error("Could not find the header row (looking for 'Product Name').");
+  const hdr=rows[hi].map(h=>norm(h)); const col=n=>hdr.findIndex(h=>h&&h.includes(n));
+  const C={code:col("product code"),name:col("product name"),type:col("product type"),ceu:col("ceu"),price:col("price")};
+  const out=[], dups=[]; const seen=new Set();
+  for(const r of rows.slice(hi+1)){
+    if(!r||!r[C.name]) continue;
+    const name=String(r[C.name]).trim(); const k=norm(name);
+    const ceu=parseCeu(r[C.ceu]);
+    if(seen.has(k)){ dups.push(name); continue; } seen.add(k);
+    out.push({product_code: r[C.code]!=null?String(r[C.code]).trim():"", name, product_type: r[C.type]!=null?String(r[C.type]).trim():"", ceu_raw: r[C.ceu]!=null?String(r[C.ceu]).trim():"", ceu_value:ceu.value, ceu_type:ceu.type, price: C.price>=0&&r[C.price]!=null?String(r[C.price]).trim():""});
+  }
+  return {rows:out,dups};
+}
+function setProgress(id,pct){ $("#"+id).style.width=pct+"%"; }
+
+async function handleUpload(kind, file){
+  const pg={coaches:"pgCoaches",orders:"pgOrders",catalog:"pgCatalog"}[kind];
+  try{
+    setProgress(pg,10);
+    const wb=await readWorkbook(file);
+    if(kind==="coaches"){
+      const {rows,listName}=parseCoaches(wb);
+      if(!rows.length) throw new Error("No coach rows found.");
+      if(!confirm(`Replace the current coach list with ${rows.length} coaches from "${listName||file.name}"?\n\nNotes are kept.`)) { setProgress(pg,0); return; }
+      setProgress(pg,50);
+      const {data,error}=await sb.rpc("replace_coaches",{p_rows:rows,p_list_name:listName||file.name,p_file_name:file.name});
+      if(error) throw error;
+      toast(`Coach list replaced: ${data} coaches loaded.`);
+    } else if(kind==="orders"){
+      const rows=parseOrders(wb);
+      if(!rows.length) throw new Error("No order rows found.");
+      const before=state.orders.length;
+      const chunk=500; let done=0;
+      for(let i=0;i<rows.length;i+=chunk){
+        const {error}=await sb.rpc("upsert_orders",{p_rows:rows.slice(i,i+chunk)});
+        if(error) throw error;
+        done+=Math.min(chunk,rows.length-i); setProgress(pg,10+80*done/rows.length);
+      }
+      const dates=rows.map(r=>r.order_date).filter(Boolean).sort();
+      await sb.rpc("log_upload",{p_kind:"orders",p_file_name:file.name,p_row_count:rows.length,p_detail:{first:dates[0],last:dates[dates.length-1]}});
+      await loadAll();
+      toast(`Orders processed: ${rows.length} in file, ${state.orders.length-before} new (${state.orders.length} total).`);
+      setProgress(pg,100); return;
+    } else {
+      const {rows,dups}=parseCatalog(wb);
+      if(!rows.length) throw new Error("No catalog rows found.");
+      setProgress(pg,50);
+      const {data,error}=await sb.rpc("replace_catalog",{p_rows:rows,p_file_name:file.name});
+      if(error) throw error;
+      toast(`Catalog loaded: ${data} products.` + (dups.length? ` Duplicate names kept first occurrence: ${dups.join("; ")}` : ""), dups.length>0);
+    }
+    setProgress(pg,100);
+    await loadAll();
+  }catch(e){ console.error(e); toast("Upload failed: "+(e.message||e), true); setProgress(pg,0); }
+}
+
+/* ---------- export ---------- */
+function selectedRows(){ return state.computed.rows.filter(r=>state.selected.has(r.c.credential_number)); }
+function exportSheet(){
+  const rows=selectedRows();
+  const data=rows.map(r=>({
+    "Name":r.c.name, "Email":r.c.email, "Phone":r.c.phone, "Level":r.c.level, "Credential":r.c.credential_number,
+    "City":r.c.city, "State":r.c.state,
+    "Background Check Valid": r.bgOk?"Yes":"No", "BG Days Remaining": r.bgDays, "BG Expiration": r.c.bg_expiration,
+    "SafeSport Valid": r.ssOk?"Yes":"No", "SafeSport Days Remaining": r.ssDays, "SafeSport Expiration": r.c.ss_expiration,
+    "Official CEUs": r.off, "Adjunct CEUs": r.adj, "Latest Note": r.notes[0]?.note || ""
+  }));
+  const ws=XLSX.utils.json_to_sheet(data); ws["!cols"]=Object.keys(data[0]||{}).map(k=>({wch:Math.max(12,k.length+2)}));
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"Coaches");
+  XLSX.writeFile(wb,`coach-email-list-${todayISO()}.xlsx`);
+}
+async function copyEmails(){
+  const list=selectedRows().map(r=>r.c.email).filter(Boolean).join("; ");
+  try{ await navigator.clipboard.writeText(list); toast(`Copied ${selectedRows().length} email addresses (semicolon separated for Outlook).`); }
+  catch{ modal(`<button class="btn ghost sm close" onclick="closeModal()">Close</button><h2>Email addresses</h2><textarea style="width:100%;height:200px">${esc(list)}</textarea>`); }
+}
+
+/* ---------- events ---------- */
+function bind(){
+  $$(".tab").forEach(b=>b.addEventListener("click",()=>{ $$(".tab").forEach(x=>x.classList.toggle("active",x===b)); ["coaches","review","catalog","uploads"].forEach(t=>$("#tab-"+t).classList.toggle("hidden",t!==b.dataset.tab)); }));
+  $("#dateFrom").value=state.from; $("#dateTo").value=state.to;
+  $("#dateFrom").addEventListener("change",e=>{ state.from=e.target.value; localStorage.setItem("ceu.from",state.from); recompute(); renderAll(); });
+  $("#dateTo").addEventListener("change",e=>{ state.to=e.target.value; localStorage.setItem("ceu.to",state.to); recompute(); renderAll(); });
+  $("#search").addEventListener("input",e=>{ state.search=e.target.value; renderCoaches(); });
+  $("#quickFilter").addEventListener("change",e=>{ state.quick=e.target.value; renderCoaches(); });
+  $$(".chip").forEach(c=>c.addEventListener("click",()=>{ const lv=+c.dataset.lv; if(state.levels.has(lv)) state.levels.delete(lv); else state.levels.add(lv); c.classList.toggle("on",state.levels.has(lv)); renderCoaches(); }));
+  $("#selAll").addEventListener("change",e=>{ const rows=visibleRows(); rows.forEach(r=> e.target.checked ? state.selected.add(r.c.credential_number) : state.selected.delete(r.c.credential_number)); renderCoaches(); });
+  $("#exportBtn").addEventListener("click",exportSheet);
+  $("#copyEmails").addEventListener("click",copyEmails);
+
+  $("#coachBody").addEventListener("click",async e=>{
+    const tr=e.target.closest("tr[data-cred]"); if(!tr) return; const cred=tr.dataset.cred;
+    const r=state.computed.rows.find(x=>x.c.credential_number===cred); if(!r) return;
+    if(e.target.classList.contains("rowsel")){ e.target.checked? state.selected.add(cred) : state.selected.delete(cred); renderCoaches(); return; }
+    if(e.target.classList.contains("ceu")){ showCeuModal(r,e.target.dataset.kind); return; }
+    if(e.target.classList.contains("notebtn")){ state.open.has(cred)? state.open.delete(cred) : state.open.add(cred); renderCoaches(); return; }
+    if(e.target.classList.contains("savenote")){
+      const ta=tr.querySelector("textarea"); const note=ta.value.trim(); if(!note) return;
+      e.target.disabled=true;
+      const {error}=await sb.from("coach_notes").insert({credential_number:cred,note,author_email:state.user.email});
+      if(error){ toast("Could not save note: "+error.message,true); e.target.disabled=false; return; }
+      state.notes=await fetchAll("coach_notes","*","id"); recompute(); renderCoaches(); toast("Note saved."); return;
+    }
+    if(e.target.classList.contains("delnote")){
+      if(!confirm("Delete this note?")) return;
+      const {error}=await sb.from("coach_notes").delete().eq("id",e.target.dataset.id);
+      if(error){ toast("Could not delete: "+error.message,true); return; }
+      state.notes=await fetchAll("coach_notes","*","id"); recompute(); renderCoaches(); return;
+    }
+    if(e.target.closest("td.name")){ state.open.has(cred)? state.open.delete(cred) : state.open.add(cred); renderCoaches(); }
+  });
+
+  $("#nameMatches").addEventListener("click",async e=>{
+    const b=e.target.closest(".alias"); if(!b) return;
+    const s=state.computed.suggestions[+b.dataset.i];
+    const {error}=await sb.from("coach_aliases").upsert({credential_number:s.coach.credential_number,email_key:s.email_key,status:b.dataset.status,decided_by:state.user.email});
+    if(error){ toast(error.message,true); return; }
+    state.aliases=await fetchAll("coach_aliases","*","credential_number"); recompute(); renderAll(); toast(`${b.dataset.status==="confirmed"?"Confirmed":"Rejected"} ${s.email_key} for ${s.coach.name}.`);
+  });
+  $("#unmapped").addEventListener("click",async e=>{
+    const b=e.target.closest(".um-add"); if(!b) return; const tr=b.closest("tr");
+    const value=parseFloat(tr.querySelector(".um-val").value)||0, type=tr.querySelector(".um-type").value;
+    const {error}=await sb.from("catalog_products").upsert({name:b.dataset.name,ceu_value:value,ceu_type:value?type:"none",source:"manual",updated_by:state.user.email},{onConflict:"name_key"});
+    if(error){ toast(error.message,true); return; }
+    state.catalog=await fetchAll("catalog_products","*","id"); recompute(); renderAll(); toast("Added to catalog.");
+  });
+
+  $("#catSearch").addEventListener("input",e=>{ state.catSearch=e.target.value; renderCatalog(); });
+  $("#catType").addEventListener("change",e=>{ state.catType=e.target.value; renderCatalog(); });
+  $("#catBody").addEventListener("change",async e=>{
+    const tr=e.target.closest("tr[data-id]"); if(!tr) return;
+    const value=parseFloat(tr.querySelector(".cat-val").value)||0, type=tr.querySelector(".cat-type").value;
+    const {error}=await sb.from("catalog_products").update({ceu_value:value,ceu_type:type,updated_at:new Date().toISOString(),updated_by:state.user.email}).eq("id",tr.dataset.id);
+    if(error){ toast(error.message,true); return; }
+    const p=state.catalog.find(x=>x.id==tr.dataset.id); p.ceu_value=value; p.ceu_type=type; recompute(); renderCoaches(); renderReview(); toast("Catalog updated.");
+  });
+  $("#catBody").addEventListener("click",async e=>{
+    if(!e.target.classList.contains("cat-del")) return; const tr=e.target.closest("tr[data-id]");
+    if(!confirm("Delete this manual product?")) return;
+    const {error}=await sb.from("catalog_products").delete().eq("id",tr.dataset.id); if(error){ toast(error.message,true); return; }
+    state.catalog=await fetchAll("catalog_products","*","id"); recompute(); renderAll();
+  });
+  $("#addProductBtn").addEventListener("click",()=>{
+    modal(`<button class="btn ghost sm close" onclick="closeModal()">Close</button><h2>Add product</h2>
+      <div class="field" style="margin-top:10px"><label>Exact product name as it appears in Thinkific</label><input type="text" id="npName" style="width:100%"></div>
+      <div class="inline" style="margin-top:10px"><div class="field"><label>CEUs</label><input type="number" id="npVal" step="0.5" min="0" value="1"></div><div class="field"><label>Type</label><select id="npType"><option value="official">Official</option><option value="adjunct">Adjunct</option><option value="none">None</option></select></div><div class="field"><label>Code</label><input type="text" id="npCode" style="min-width:90px;width:90px"></div></div>
+      <div style="margin-top:14px"><button class="btn red" id="npSave">Save</button></div>`);
+    $("#npSave").addEventListener("click",async()=>{
+      const name=$("#npName").value.trim(); if(!name) return;
+      const {error}=await sb.from("catalog_products").upsert({name,ceu_value:parseFloat($("#npVal").value)||0,ceu_type:$("#npType").value,product_code:$("#npCode").value.trim()||null,source:"manual",updated_by:state.user.email},{onConflict:"name_key"});
+      if(error){ toast(error.message,true); return; }
+      closeModal(); state.catalog=await fetchAll("catalog_products","*","id"); recompute(); renderAll(); toast("Product saved.");
+    });
+  });
+
+  $("#upCoaches").addEventListener("change",e=>{ if(e.target.files[0]) handleUpload("coaches",e.target.files[0]); e.target.value=""; });
+  $("#upOrders").addEventListener("change",e=>{ if(e.target.files[0]) handleUpload("orders",e.target.files[0]); e.target.value=""; });
+  $("#upCatalog").addEventListener("change",e=>{ if(e.target.files[0]) handleUpload("catalog",e.target.files[0]); e.target.value=""; });
+
+  $("#logoutBtn").addEventListener("click",async()=>{ await sb.auth.signOut(); location.reload(); });
+  $("#pwBtn").addEventListener("click",()=>passwordModal(false));
+  $("#loginBtn").addEventListener("click",login);
+  $("#loginPass").addEventListener("keydown",e=>{ if(e.key==="Enter") login(); });
+}
+
+/* ---------- auth ---------- */
+async function login(){
+  $("#loginErr").textContent=""; $("#loginBtn").disabled=true;
+  const {error}=await sb.auth.signInWithPassword({email:$("#loginEmail").value.trim(),password:$("#loginPass").value});
+  $("#loginBtn").disabled=false;
+  if(error){ $("#loginErr").textContent=error.message; return; }
+  start();
+}
+function passwordModal(forced){
+  modal(`${forced?"":'<button class="btn ghost sm close" onclick="closeModal()">Close</button>'}<h2>${forced?"Set your password":"Change password"}</h2>
+    <p class="meta">${forced?"You signed in with a temporary password. Choose a new one (at least 10 characters) to continue.":"At least 10 characters."}</p>
+    <div class="field" style="margin-top:10px"><label>New password</label><input type="password" id="np1" autocomplete="new-password" style="width:100%"></div>
+    <div class="field" style="margin-top:10px"><label>Repeat</label><input type="password" id="np2" autocomplete="new-password" style="width:100%"></div>
+    <div id="npErr" class="err"></div><div style="margin-top:14px"><button class="btn red" id="npBtn">Save password</button></div>`);
+  $("#npBtn").addEventListener("click",async()=>{
+    const a=$("#np1").value,b=$("#np2").value;
+    if(a.length<10){ $("#npErr").textContent="Use at least 10 characters."; return; }
+    if(a!==b){ $("#npErr").textContent="Passwords do not match."; return; }
+    const {error}=await sb.auth.updateUser({password:a,data:{must_change_password:false}});
+    if(error){ $("#npErr").textContent=error.message; return; }
+    closeModal(); toast("Password updated.");
+  });
+}
+async function start(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){ $("#loginView").classList.remove("hidden"); $("#appView").classList.add("hidden"); return; }
+  state.user=session.user; $("#userEmail").textContent=state.user.email;
+  $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
+  try{ await loadAll(); }
+  catch(e){ console.error(e); toast("Could not load data: "+(e.message||e)+". Is this account on the allowed list?", true); }
+  if(state.user.user_metadata?.must_change_password) passwordModal(true);
+}
+bind(); start();
+</script>
+</body>
+</html>
